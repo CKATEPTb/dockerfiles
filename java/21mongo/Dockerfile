@@ -3,6 +3,11 @@ FROM        --platform=$TARGETOS/$TARGETARCH eclipse-temurin:21-jdk-noble
 LABEL       org.opencontainers.image.source="https://github.com/CKATEPTb/dockerfiles"
 LABEL       org.opencontainers.image.licenses=MIT
 
+RUN apt-get update && apt-get install -y gnupg curl
+RUN curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg
+RUN echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-8.0.list
+RUN apt-get update && apt-get install -y mongodb-org
+
 RUN         apt update -y \
             && apt install -y \
                 curl \
@@ -40,8 +45,7 @@ RUN         apt update -y \
 				libx11-6 \
 				# для openblas (ускорение математики, для opencv/javacv)
 				libopenblas0 \
-				libopenblas-dev \
-            	mongodb
+				libopenblas-dev
 
 ## Setup user and working directory
 RUN         useradd -m -d /home/container -s /bin/bash container
