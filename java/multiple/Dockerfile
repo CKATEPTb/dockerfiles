@@ -1,4 +1,4 @@
-FROM --platform=$TARGETOS/$TARGETARCH ghcr.io/parkervcp/yolks:java_21
+FROM --platform=$TARGETOS/$TARGETARCH ghcr.io/parkervcp/yolks:java_21@sha256:b655adc25686a0bcc94497f680c06b88f83f15a137d4dcddf812b08e91d0d562
 
 LABEL org.opencontainers.image.source="https://github.com/CKATEPTb/dockerfiles"
 LABEL org.opencontainers.image.licenses=MIT
