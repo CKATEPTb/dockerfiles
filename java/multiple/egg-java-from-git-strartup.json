@@ -1,0 +1,212 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2025-07-18T17:28:52+03:00",
+    "name": "Java from Git Strartup",
+    "author": "ckateptb@vivaldi.net",
+    "description": "This Egg is designed to build and run Java applications directly from a specified Git repository.\r\n\r\nBuild system:\r\nBy default, the application is built using Gradle (.\/gradlew build).\r\nHowever, if your repository contains a custom build.sh script in the root directory, it will be executed instead for building your project.\r\n\r\nPort handling:\r\nAll assigned ports are exposed to your application as environment variables:\r\nPORT_1 (main port), PORT_2, PORT_3, ..., up to PORT_N (additional ports).\r\nThis makes it easy to configure applications or services that require multiple ports.\r\n\r\nGit integration and updates:\r\nWhen the Egg is reinstalled via the server settings, the system will update the local repository by pulling the latest changes from Git, rather than deleting everything and reinstalling from scratch.\r\n\r\nThis Egg supports both public and private repositories, and is suitable for running any modern Java application: Spring Boot, microservices, proxies, bots, and more.",
+    "features": null,
+    "docker_images": {
+        "ghcr.io\/ckateptb\/dockerfiles:java_multiple": "ghcr.io\/ckateptb\/dockerfiles:java_multiple"
+    },
+    "file_denylist": [],
+    "startup": "if [ ! -z \"{{MONGO_PORT}}\" ]; then mkdir -p \/home\/container\/database\/mongodb\/logs; mongod --fork --dbpath \/home\/container\/database\/mongodb\/ --port {{MONGO_PORT}} --bind_ip 0.0.0.0 --logpath \/home\/container\/database\/mongodb\/logs\/mongo.log > \/dev\/null 2>&1; until nc -z -v -w5 127.0.0.1 {{MONGO_PORT}} > \/dev\/null 2>&1; do sleep 3; done; fi; if [ ! -z \"{{REDIS_PORT}}\" ]; then mkdir -p \/home\/container\/database\/redis; redis-server --daemonize yes --dir \/home\/container\/database\/redis --port {{REDIS_PORT}} --bind 0.0.0.0 --save \"\" --appendonly no > \/dev\/null 2>&1; until nc -z -v -w5 127.0.0.1 {{REDIS_PORT}} > \/dev\/null 2>&1; do sleep 3; done; fi; if [ ! -z \"{{MARIA_PORT}}\" ]; then mkdir -p \/home\/container\/database\/mariadb; if [ ! -d \/home\/container\/database\/mariadb\/mysql ]; then mysqld --initialize-insecure --datadir=\/home\/container\/database\/mariadb > \/dev\/null 2>&1; fi; mysqld --datadir=\/home\/container\/database\/mariadb --port={{MARIA_PORT}} --socket=\/home\/container\/database\/mariadb\/mysql.sock --skip-networking=0 --bind-address=0.0.0.0 --skip-grant-tables --skip-symbolic-links --skip-name-resolve --log-error=\/home\/container\/database\/mariadb\/mariadb.log --pid-file=\/home\/container\/database\/mariadb\/mariadb.pid > \/dev\/null 2>&1 & until nc -z -v -w5 127.0.0.1 {{MARIA_PORT}} > \/dev\/null 2>&1; do sleep 3; done; fi; export TMPDIR=\/home\/container\/.tmp; rm -rf $TMPDIR > \/dev\/null 2>&1; mkdir -p $TMPDIR > \/dev\/null 2>&1; export PLAYWRIGHT_BROWSERS_PATH=\/home\/container\/playwright; mkdir -p {{PLAYWRIGHT_BROWSERS_PATH}} > \/dev\/null 2>&1; (until nc -z -v -w5 127.0.0.1 $SERVER_PORT > \/dev\/null 2>&1; do sleep 2; done; echo \"${APPLICATION_NAME:-Java application} started and is listening on port $SERVER_PORT!\") & JAVA_MAJOR=$(echo \"$JAVA_VERSION\" | grep -o '[0-9]\\+' | head -n 1); JAVA_BIN=$(update-alternatives --list java | grep \"$JAVA_MAJOR\" | head -n 1); if [ -z \"$JAVA_BIN\" ]; then echo \"No java binary found for major version $JAVA_MAJOR\"; exit 1; fi; export JAVA_HOME=\"$(dirname $(dirname \"$JAVA_BIN\"))\"; export PATH=\"$JAVA_HOME\/bin:$PATH\"; echo \"Using Java: $JAVA_HOME\"; eval \"{{STARTUP_SCRIPT}}\"",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"Java application started and is listening on port\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!\/bin\/bash\r\n# Clone\/update and build java project from git repository\r\n#\r\n# Server Files: \/mnt\/server\r\nPROJECT=java\r\n\r\napt update\r\napt install -y curl jq git zip unzip ca-certificates tar\r\nupdate-ca-certificates\r\n\r\napt install -y wget gnupg2\r\nwget -qO - https:\/\/repos.azul.com\/azul-repo.key | gpg --dearmor -o \/usr\/share\/keyrings\/azul.gpg\r\necho \"deb [signed-by=\/usr\/share\/keyrings\/azul.gpg] http:\/\/repos.azul.com\/zulu\/deb stable main\" > \/etc\/apt\/sources.list.d\/zulu.list\r\napt update\r\n\r\napt install -y ${JAVA_VERSION}\r\n\r\napt install maven -y\r\n\r\nif [ ! -z \"${GIT_URL}\" ]; then\r\n    mkdir -p \/mnt\/server\/sources\r\n    cd \/mnt\/server\/sources\r\n    echo \"GIT_URL variable found. Preparing to clone into \/mnt\/server\/sources\"\r\n    # If there is a token, insert it into the URL\r\n    if [ ! -z \"${GIT_TOKEN}\" ]; then\r\n        CLONE_URL=\"https:\/\/${GIT_TOKEN}@$(echo -e ${GIT_URL} | cut -d\/ -f3-)\"\r\n    else\r\n        CLONE_URL=\"${GIT_URL}\"\r\n    fi\r\n\r\n    # If .git exists, pull; otherwise, clone the repository\r\n    if [ -d .git ]; then\r\n        echo \"Updating existing repository ${GIT_URL}\"\r\n        git config --global --add safe.directory \/mnt\/server\/sources\r\n        git pull\r\n    else\r\n        if [ ! -z \"${GIT_BRANCH}\" ]; then\r\n            git clone -b \"${GIT_BRANCH}\" \"${CLONE_URL}\" \/mnt\/server\/sources\r\n        else\r\n            git clone \"${CLONE_URL}\" \/mnt\/server\/sources\r\n        fi\r\n    fi\r\n\r\n    # Create build.sh if it doesn't exist\r\n    if [ ! -f build.sh ]; then\r\n        echo \"build.sh does not exist, creating it\"\r\n        cat <<'EOF' > build.sh\r\nPORT=_port_\r\nexport PORT_1=\"$PORT\"\r\n\r\necho \"Building the project using .\/gradlew build\"\r\nchmod +x .\/gradlew\r\n.\/gradlew clean build\r\nJAR=$(ls -S .\/build\/libs\/*.jar 2>\/dev\/null | head -n 1)\r\nif [ -z \"$JAR\" ]; then\r\n  echo \"No JAR files found in .\/build\/libs. Build may have failed.\"\r\n  exit 1\r\nfi\r\n# Copy to \/mnt\/server\/server.jar, overwrite if exists\r\ncp -f \"$JAR\" \/mnt\/server\/server.jar\r\necho \"Project built. Output file: server.jar\"\r\nEOF\r\n    fi\r\n    chmod +x build.sh\r\n    .\/build.sh\r\nelse\r\n    echo \"GIT_URL variable not set. Skipping clone and build steps. User is responsible for preparing sources.\"\r\nfi\r\ncd \/mnt\/server\r\n# delete sources to free volume\r\nrm -rf \/mnt\/server\/sources",
+            "container": "ghcr.io\/parkervcp\/yolks:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Git Repository",
+            "description": "Enter a valid Git repository URL (e.g., https:\/\/github.com\/username\/repo.git).",
+            "env_variable": "GIT_URL",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|regex:\/^https:\\\/\\\/.+\\.git$\/",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Token",
+            "description": "Enter your Git access token here. This is used for accessing private repositories. Leave blank if not needed.",
+            "env_variable": "GIT_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Repository Brach",
+            "description": "Enter the name of the Git branch to use. Leave blank to use default.",
+            "env_variable": "GIT_BRANCH",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:40",
+            "field_type": "text"
+        },
+        {
+            "name": "Java Version",
+            "description": "Please select the Java version that will be used to build and run project.",
+            "env_variable": "JAVA_VERSION",
+            "default_value": "zulu21-jdk",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:openjdk-8-jdk,openjdk-11-jdk,zulu16-jdk,openjdk-17-jdk,zulu21-jdk,zulu22-jdk,zulu24-jdk",
+            "field_type": "text"
+        },
+        {
+            "name": "MongoDB Port",
+            "description": "",
+            "env_variable": "MONGO_PORT",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "MariaDB Port",
+            "description": "",
+            "env_variable": "MARIA_PORT",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Redis Port",
+            "description": "",
+            "env_variable": "REDIS_PORT",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Startup Script",
+            "description": "The command used to start your application.\r\nYou can customize this script if you need to pass additional options or use a different launch method.",
+            "env_variable": "STARTUP_SCRIPT",
+            "default_value": "java -Djava.io.tmpdir=${TMPDIR} -Dterminal.jline=false -Dterminal.ansi=true -jar server.jar",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_1.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_1",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_2.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_2",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_3.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_3",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_4.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_4",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_5.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_5",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_6.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_6",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_7.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_7",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_8.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_8",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_9.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_9",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Port",
+            "description": "Optional additional port for your application.\r\nThis value will be available to your app as the environment variable SERVER_PORT_10.\r\nLeave empty if not needed.",
+            "env_variable": "SERVER_PORT_10",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|between:1,65535",
+            "field_type": "text"
+        }
+    ]
+}
