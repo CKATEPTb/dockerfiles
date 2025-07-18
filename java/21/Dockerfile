@@ -28,7 +28,11 @@ RUN apt-get install -y libsm6 libxext6 libxrender1 libglib2.0-0 libxcb-shm0 libx
     libxcb-render-util0 libxcb1 libx11-6 libopenblas0 libopenblas-dev
 
 # --- Playwright ---
-RUN apt-get install -y libnss3 libnspr4
+RUN apt-get install -y libnss3 libnspr4 libgtk-4.so.1 libgraphene-1.0.so.0 libxslt.so.1 libwoff2dec.so.1.0.2 \
+    libevent-2.1.so.7 libgstallocators-1.0.so.0 libgstapp-1.0.so.0 libgstpbutils-1.0.so.0 libgstaudio-1.0.so.0 \
+    libgsttag-1.0.so.0 libgstvideo-1.0.so.0 libgstgl-1.0.so.0 libgstcodecparsers-1.0.so.0 libgstfft-1.0.so.0 \
+    libavif.so.16 libharfbuzz-icu.so.0 libenchant-2.so.2 libsecret-1.so.0 libhyphen.so.0 libmanette-0.2.so.0 \
+    libGLESv2.so.2
 
 # --- TRIM ---
 RUN rm -rf /var/lib/apt/lists/*
