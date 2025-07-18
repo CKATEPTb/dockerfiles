@@ -5,29 +5,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 LABEL org.opencontainers.image.source="https://github.com/CKATEPTb/dockerfiles"
 LABEL org.opencontainers.image.licenses=MIT
 
-# --- Установка MongoDB 8 Community (Ubuntu 24.04 Noble) ---
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    gnupg \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir /docker-entrypoint-initdb.d
+# --- MongoDB 8 установка ---
+RUN apt-get update && apt-get install -y ca-certificates gnupg wget && rm -rf /var/lib/apt/lists/*
 
-RUN wget -qO - https://pgp.mongodb.com/server-8.0.asc | gpg --dearmor -o /etc/apt/keyrings/mongodb.asc && \
-    echo "deb [ signed-by=/etc/apt/keyrings/mongodb.asc ] http://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-8.0.list
+RUN wget -qO - https://pgp.mongodb.com/server-8.0.asc | gpg --dearmor -o /etc/apt/keyrings/mongodb.gpg
 
-ENV MONGO_VERSION 8.0.11
+RUN echo "deb [ arch=amd64,arm64 signed-by=/etc/apt/keyrings/mongodb.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-8.0.list
 
-RUN apt-get update && apt-get install -y \
-    mongodb-org=$MONGO_VERSION \
-    mongodb-org-server=$MONGO_VERSION \
-    mongodb-org-shell=$MONGO_VERSION \
-    mongodb-org-mongos=$MONGO_VERSION \
-    mongodb-org-tools=$MONGO_VERSION \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV GLIBC_TUNABLES glibc.pthread.rseq=0
+RUN apt-get update && apt-get install -y mongodb-org && rm -rf /var/lib/apt/lists/*
 # --- Конец блока MongoDB ---
 
 # --- Установка нужных пакетов и библиотек ---
