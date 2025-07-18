@@ -51,6 +51,8 @@ RUN apt-get update && apt-get install -y \
     libopenblas0 \
     libopenblas-dev \
     netcat-openbsd \
+    libnss3 \
+    libnspr4 \
     && rm -rf /var/lib/apt/lists/*
 
 # --- Настройка пользователя и рабочей директории ---
