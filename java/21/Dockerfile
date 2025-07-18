@@ -11,17 +11,17 @@ RUN apt-get update && \
     apt-get install -y mariadb-server netcat-openbsd && \
     wget -qO - https://pgp.mongodb.com/server-8.0.asc | gpg --dearmor -o /etc/apt/keyrings/mongodb.gpg && \
     echo "deb [ arch=amd64,arm64 signed-by=/etc/apt/keyrings/mongodb.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-8.0.list && \
-    wget -qO - https://repos.azul.com/azul-repo.key | gpg --dearmor -o /usr/share/keyrings/azul.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/azul.gpg] https://repos.azul.com/zulu/deb stable main" > /etc/apt/sources.list.d/zulu.list && \
+    curl -s https://repos.azul.com/azul-repo.key | gpg --dearmor -o /usr/share/keyrings/azul.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/azul.gpg] https://repos.azul.com/zulu/deb stable main" | tee /etc/apt/sources.list.d/zulu.list && \
     apt-get update && \
     apt-get install -y \
       openjdk-8-jdk \
       openjdk-11-jdk \
       openjdk-17-jdk \
-      zulu-16 \
-      zulu-21 \
-      zulu-22 \
-      zulu-24 && \
+      zulu16-jdk \
+      zulu21-jdk \
+      zulu22-jdk \
+      zulu24-jdk && \
     apt-get install -y mongodb-org && \
     apt-get install -y redis-server && \
     apt-get install -y ffmpeg libvpx-dev libwebp-dev libvorbis0a libopus0 libogg0 && \
