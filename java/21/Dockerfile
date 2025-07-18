@@ -29,10 +29,32 @@ RUN apt-get install -y libsm6 libxext6 libxrender1 libglib2.0-0 libxcb-shm0 libx
 
 # --- Playwright ---
 # --- Playwright ---
-RUN apt-get install -y libnss3 libnspr4 libgtk-4-1 libgraphene-1.0-0 libxslt1.1 libwoff1 libevent-2.1-7 \
-    libgstreamer-plugins-base1.0-0 libgstreamer-plugins-good1.0-0 libgstaudio-1.0-0 libgstpbutils-1.0-0 \
-    libgsttag-1.0-0 libgstvideo-1.0-0 libgstgl-1.0-0 libgstcodecparsers-1.0-0 libgstfft-1.0-0 libavif16 \
-    libharfbuzz-icu0 libenchant-2-2 libsecret-1-0 libhyphen0 libmanette-0.2-0 libgles2
+RUN apt-get install -y \
+    libnss3 \
+    libnspr4 \
+    libgtk-4-1 \
+    libgraphene-1.0-0 \
+    libxslt1.1 \
+    libwoff1 \
+    libevent-2.1-7 \
+    libgstreamer-plugins-base1.0-0 \
+    libgstreamer-plugins-good1.0-0 \
+    libgstaudio-1.0-0 \
+    libgstpbutils-1.0-0 \
+    libgsttag-1.0-0 \
+    libavif16 \
+    libharfbuzz-icu0 \
+    libenchant-2-2 \
+    libsecret-1-0 \
+    libhyphen0 \
+    libmanette-0.2-0 \
+    libgles2 \
+    gstreamer1.0-plugins-base \
+    gstreamer1.0-plugins-good \
+    gstreamer1.0-libav \
+    gstreamer1.0-plugins-bad \
+    gstreamer1.0-plugins-ugly
+
 
 # --- TRIM ---
 RUN rm -rf /var/lib/apt/lists/*
