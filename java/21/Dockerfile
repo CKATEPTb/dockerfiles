@@ -10,10 +10,7 @@ WORKDIR /
 RUN apt-get update && apt-get install -y software-properties-common ca-certificates lsb-release gnupg wget
 
 # --- MariaDB ---
-RUN wget -O- https://mariadb.org/mariadb_release_signing_key.asc | apt-key add -
-RUN echo "deb [arch=amd64,arm64] http://archive.mariadb.org/mariadb-10.3.39/repo/ubuntu jammy main" \
-    > /etc/apt/sources.list.d/mariadb.list
-RUN apt-get update && apt-get install -y mariadb-server=1:10.3.39+maria~jammy netcat-openbsd
+RUN apt-get update && apt-get install -y mariadb-server netcat-openbsd
 
 # --- MongoDB 8 ---
 RUN wget -qO - https://pgp.mongodb.com/server-8.0.asc | gpg --dearmor -o /etc/apt/keyrings/mongodb.gpg
