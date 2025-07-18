@@ -18,7 +18,6 @@ jobs:
       matrix:
         tag:
           - 21
-          - 21mongo
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3

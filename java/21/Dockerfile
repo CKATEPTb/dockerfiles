@@ -1,56 +1,34 @@
-FROM        --platform=$TARGETOS/$TARGETARCH eclipse-temurin:21-jdk-noble
+FROM --platform=$TARGETOS/$TARGETARCH ghcr.io/parkervcp/yolks:java_21
 
-LABEL       org.opencontainers.image.source="https://github.com/CKATEPTb/dockerfiles"
-LABEL       org.opencontainers.image.licenses=MIT
+LABEL org.opencontainers.image.source="https://github.com/CKATEPTb/dockerfiles"
+LABEL org.opencontainers.image.licenses=MIT
 
-RUN         apt update -y \
-            && apt install -y \
-                curl \
-                lsof \
-                ca-certificates \
-                openssl \
-                git \
-                tar \
-                sqlite3 \
-                fontconfig \
-                tzdata \
-                iproute2 \
-                libfreetype6 \
-                tini \
-				zip \
-				unzip \
-                jq \
-				# ffmpeg + все кодеки для webm, vp8/vp9, opus, vorbis
-				ffmpeg \
-				libvpx-dev \
-				libwebp-dev \
-				libvorbis0a \
-				libopus0 \
-				libogg0 \
-				# для opencv, javacv, bytedeco (X11 стэк)
-				libsm6 \
-				libxext6 \
-				libxrender1 \
-				libglib2.0-0 \
-				libxcb-shm0 \
-				libxcb-xfixes0 \
-				libxcb-shape0 \
-				libxcb-render-util0 \
-				libxcb1 \
-				libx11-6 \
-				# для openblas (ускорение математики, для opencv/javacv)
-				libopenblas0 \
-				libopenblas-dev
+# --- Commons ---
+RUN apt-get update && apt-get install -y software-properties-common ca-certificates lsb-release gnupg wget
 
-## Setup user and working directory
-RUN         useradd -m -d /home/container -s /bin/bash container
-USER        container
-ENV         USER=container HOME=/home/container
-WORKDIR     /home/container
+# --- MariaDB ---
+RUN wget -O- https://mariadb.org/mariadb_release_signing_key.asc | apt-key add -
+RUN echo "deb [arch=amd64,arm64] http://archive.mariadb.org/mariadb-10.3.39/repo/ubuntu jammy main" \
+    > /etc/apt/sources.list.d/mariadb.list
+RUN apt-get update && apt-get install -y mariadb-server=1:10.3.39+maria~jammy netcat-traditional
 
-STOPSIGNAL SIGINT
+# --- MongoDB 8 ---
+RUN wget -qO - https://pgp.mongodb.com/server-8.0.asc | gpg --dearmor -o /etc/apt/keyrings/mongodb.gpg
+RUN echo "deb [ arch=amd64,arm64 signed-by=/etc/apt/keyrings/mongodb.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/8.0 multiverse" > /etc/apt/sources.list.d/mongodb-org-8.0.list
+RUN apt update && apt install -y mongodb-org netcat-openbsd
 
-COPY        --chown=container:container ../entrypoint.sh /entrypoint.sh
-RUN         chmod +x /entrypoint.sh
-ENTRYPOINT    ["/usr/bin/tini", "-g", "--"]
-CMD         ["/entrypoint.sh"]
+# --- REDIS ---
+# TODO
+
+# --- FFMpeg ---
+RUN apt install -y ffmpeg libvpx-dev libwebp-dev libvorbis0a libopus0 libogg0
+
+# --- OpenCV ---
+RUN apt libsm6 libxext6 libxrender1 libglib2.0-0libxcb-shm0 libxcb-xfixes0 libxcb-shape0 libxcb-render-util0 libxcb1 \
+    libx11-6 libopenblas0 libopenblas-dev
+
+# --- Playwright ---
+RUN apt libnss3 libnspr4
+
+# --- TRIM ---
+RUN rm -rf /var/lib/apt/lists/*
