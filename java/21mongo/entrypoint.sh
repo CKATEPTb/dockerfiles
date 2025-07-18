@@ -22,15 +22,6 @@
 # SOFTWARE.
 #
 
-# Создать каталог для базы, если не существует
-mkdir -p /home/container/database
-
-# Запустить MongoDB в фоне, с нужным каталогом для данных
-mongod --dbpath /home/container/database --bind_ip 127.0.0.1 &
-
-# Дать MongoDB время стартовать (3 секунды, можно больше/меньше)
-sleep 3
-
 # Default the TZ environment variable to UTC.
 TZ=${TZ:-UTC}
 export TZ
@@ -45,6 +36,10 @@ cd /home/container || exit 1
 # Print Java version
 printf "\033[1m\033[33mcontainer@pelican~ \033[0mjava -version\n"
 java -version
+
+# Создать каталог для базы, если не существует
+mkdir -p /home/container/database
+mkdir -p /home/container/database/logs
 
 # Convert all of the "{{VARIABLE}}" parts of the command into the expected shell
 # variable format of "${VARIABLE}" before evaluating the string and automatically
