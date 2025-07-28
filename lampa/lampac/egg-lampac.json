@@ -1,0 +1,42 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2025-07-28T09:27:21+03:00",
+    "name": "Lampac",
+    "author": "ckateptb@vivaldi.net",
+    "description": "All the movies they don\u2019t want you to see \u2014 one click away. Bring your own popcorn.",
+    "features": null,
+    "docker_images": {
+        "ghcr.io\/ckateptb\/dockerfiles:lampa_lampac": "ghcr.io\/ckateptb\/dockerfiles:lampa_lampac"
+    },
+    "file_denylist": [],
+    "startup": "\/usr\/share\/dotnet\/dotnet Lampac.dll",
+    "config": {
+        "files": "{\r\n    \"init.conf\": {\r\n        \"parser\": \"json\",\r\n        \"find\": {\r\n            \"listenport\": \"{{server.build.default.port}}\",\r\n            \"listenscheme\": \"{{env.SERVER_PROTOCOL}}\"\r\n        }\r\n    }\r\n}",
+        "startup": "{\r\n    \"done\": \"Now listening on\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!\/bin\/bash\r\n# Clone\/update and build java project from git repository\r\n#\r\n# Server Files: \/mnt\/server\r\napt update && apt install -y jq\r\ncd \/mnt\/server\r\necho \"[lampac] Downloading latest release...\"\r\ncurl -L -k -o publish.zip https:\/\/github.com\/immisterio\/Lampac\/releases\/latest\/download\/publish.zip \\\r\n    && unzip -o publish.zip && rm -f publish.zip && rm -rf merchant \\\r\n    && rm -rf runtimes\/os* && rm -rf runtimes\/win* && rm -rf runtimes\/linux-arm runtimes\/linux-arm64 runtimes\/linux-musl-arm64 runtimes\/linux-musl-x64 \\\r\n    && touch isdocker\r\ncurl -k -s https:\/\/raw.githubusercontent.com\/immisterio\/Lampac\/main\/Build\/Docker\/update.sh | bash\r\njq -n \\\r\n  --arg port \"$SERVER_PORT\" \\\r\n  --arg protocol \"$SERVER_PROTOCOL\" \\\r\n  '{\r\n    frontend: \"off\",\r\n    listenscheme: $protocol,\r\n    listenport: ($port | tonumber),\r\n    chromium: { executablePath: \"\/usr\/bin\/chromium\" }\r\n  }' > .\/init.conf || echo \"[!] Failed to write init.conf\"\r\necho \"[lampac] Done.\"",
+            "container": "ghcr.io\/parkervcp\/yolks:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Protocol",
+            "description": "Select the protocol used to access the application. Valid options are http and https. Default is https.",
+            "env_variable": "SERVER_PROTOCOL",
+            "default_value": "https",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:http,https",
+            "field_type": "text"
+        }
+    ]
+}
