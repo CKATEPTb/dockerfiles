@@ -5,7 +5,7 @@ LABEL org.opencontainers.image.licenses=MIT
 
 # Установка зависимостей
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates curl unzip sed chromium xvfb libnspr4 \
+    ca-certificates curl unzip sed chromium xvfb libnspr4 ffmpeg \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Создание пользователя и рабочей директории
@@ -17,12 +17,6 @@ RUN curl -fSL -k -o dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/aspnetc
     && tar -oxzf dotnet.tar.gz -C /usr/share/dotnet \
     && rm dotnet.tar.gz
 
-# Установка ffprobe
-RUN curl -L -k -o ffprobe.zip https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v6.1/ffprobe-6.1-linux-64.zip \
-    && unzip -o ffprobe.zip -d /usr/bin \
-    && chmod +x /usr/bin/ffprobe \
-    && rm -f ffprobe.zip
-
 # TorrServer бинарник
 RUN mkdir -p /opt/torrserver \
     && curl -L -k -o /opt/torrserver/TorrServer-linux https://github.com/YouROK/TorrServer/releases/latest/download/TorrServer-linux-amd64 \
@@ -32,9 +26,6 @@ RUN mkdir -p /opt/torrserver \
 RUN mkdir -p /opt/playwright/node/linux-x64 \
     && curl -L -k -o /opt/playwright/node/linux-x64/node https://github.com/immisterio/playwright/releases/download/chrome/node-linux-x64 \
     && chmod +x /opt/playwright/node/linux-x64/node
-
-# Chromium конфигурация
-RUN echo '{"chromium":{"executablePath":"/usr/bin/chromium"}}' > /opt/init.conf
 
 # entrypoint для pterodactyl yolks
 RUN curl -fsSL https://raw.githubusercontent.com/pterodactyl/yolks/refs/heads/master/java/entrypoint.sh -o /entrypoint.sh \
