@@ -60,7 +60,7 @@ RUN mkdir -p /home/container/.playwright/node/linux-x64 \
 
 # Конфиг и права
 RUN echo '{"chromium":{"executablePath":"/usr/bin/chromium"}}' > /home/container/init.conf \
-    && chown container:container /home/container/init.conf \
+    && chown container:container /home/container/init.conf
 
 # Скачиваем entrypoint
 RUN curl -fsSL https://raw.githubusercontent.com/pterodactyl/yolks/refs/heads/master/java/entrypoint.sh -o /entrypoint.sh \
