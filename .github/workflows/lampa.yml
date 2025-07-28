@@ -1,23 +1,23 @@
-name: build java
+name: build lampa
 on:
   workflow_dispatch:
   push:
     branches:
       - master
     paths:
-      - java/**/Dockerfile
+      - lampa/**/Dockerfile
 permissions:
   packages: write
 
 jobs:
   push:
-    name: "dockerfiles:java_${{ matrix.tag }}"
+    name: "dockerfiles:lampa_${{ matrix.tag }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         tag:
-          - multiple
+          - lampac
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
@@ -41,11 +41,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: ./java
-          file: ./java/${{ matrix.tag }}/Dockerfile
+          context: ./lampa
+          file: ./lampa/${{ matrix.tag }}/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ steps.lower-repo.outputs.repository }}/dockerfiles:java_${{ matrix.tag }}
+            ghcr.io/${{ steps.lower-repo.outputs.repository }}/dockerfiles:lampa_${{ matrix.tag }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
