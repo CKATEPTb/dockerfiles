@@ -28,6 +28,7 @@ prepare_runtime_configuration() {
 	ensure_runtime_secret secure_link_secret ''
 
 	log 'Rendering version-matched ONLYOFFICE and Nginx configuration.'
+	env \
 	SERVER_ROOT="$SERVER_ROOT" \
 	IMAGE_RUNTIME_ROOT="$IMAGE_RUNTIME_ROOT" \
 	UPSTREAM_CONFIG_ROOT="$UPSTREAM_CONFIG_ROOT" \

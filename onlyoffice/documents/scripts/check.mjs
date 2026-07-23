@@ -27,6 +27,7 @@ const REQUIRED_FILES = [
 	'runtime/scripts/lib/services.sh',
 	'runtime/nginx/nginx.conf.tmpl',
 	'runtime/nginx/http-common.conf.tmpl',
+	'scripts/test-services.sh',
 ];
 
 const failures = [];

@@ -30,6 +30,7 @@ jobs:
         run: |
           node onlyoffice/documents/scripts/check.mjs
           node onlyoffice/documents/scripts/test-configure.mjs
+          bash onlyoffice/documents/scripts/test-services.sh
       - name: Check patch whitespace
         run: git diff --check
 
@@ -85,10 +86,11 @@ jobs:
           smoke_root="$(mktemp -d)"
           container_name=onlyoffice-smoke
           cleanup() {
-            docker inspect \
+            if docker inspect \
               --format 'container-state={{json .State}}' \
-              "$container_name" 2>/dev/null || true
-            docker logs "$container_name" 2>/dev/null || true
+              "$container_name" 2>/dev/null; then
+              docker logs "$container_name" || true
+            fi
             if [[ -d "$smoke_root/logs" ]]; then
               while IFS= read -r log_file; do
                 echo "===== ${log_file#"$smoke_root"/} ====="
