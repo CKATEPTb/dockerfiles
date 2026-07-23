@@ -144,7 +144,16 @@ RUN set -eux; \
 		/bin/bash /opt/nextcloud-egg/entrypoint.sh; \
 	env -i /bin/bash -c \
 		'source /opt/nextcloud-egg/runtime/scripts/lib/common.sh; resolve_command mariadbd >/dev/null'; \
+	! grep -Fq 'HTTP_X_FORWARDED_HOST' \
+		/opt/nextcloud-egg/runtime/nginx/fastcgi_params; \
+	grep -Fq 'fastcgi_param HTTP_HOST $nextcloud_http_host;' \
+		/opt/nextcloud-egg/runtime/nginx/conf.d/default.conf; \
 	cp -a /opt/nextcloud-egg/runtime/nginx /home/container/nginx; \
+	printf '%s\n' 'fastcgi_param HTTP_X_FORWARDED_HOST $http_x_forwarded_host;' \
+		>> /home/container/nginx/fastcgi_params; \
+	env -i /bin/bash -c \
+		'set -Eeuo pipefail; source /opt/nextcloud-egg/runtime/scripts/lib/common.sh; source /opt/nextcloud-egg/runtime/scripts/lib/services.sh; refresh_nginx_managed_files'; \
+	! grep -Fq 'HTTP_X_FORWARDED_HOST' /home/container/nginx/fastcgi_params; \
 	install -d /home/container/logs /home/container/www \
 		/home/container/tmp/{client-body,fastcgi,proxy,scgi,uwsgi}; \
 	chown -R 65534:65534 /home/container; \

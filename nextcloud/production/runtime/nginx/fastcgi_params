@@ -20,5 +20,5 @@ fastcgi_param REDIRECT_STATUS 200;
 fastcgi_param HTTP_PROXY "";
 fastcgi_param HTTP_AUTHORIZATION $http_authorization;
 fastcgi_param HTTP_X_FORWARDED_FOR $http_x_forwarded_for;
-fastcgi_param HTTP_X_FORWARDED_HOST $http_x_forwarded_host;
+# X-Forwarded-Host is intentionally omitted; default.conf supplies a validated HTTP_HOST.
 fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;

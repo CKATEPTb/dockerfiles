@@ -192,8 +192,28 @@ ensure_nginx_temp_directive() {
 	chmod 0644 "$config"
 }
 
+refresh_nginx_managed_files() {
+	local relative
+	local source
+	local destination
+	local -a managed_files=(
+		fastcgi_params
+		mime.types
+		snippets/security-headers.conf
+	)
+
+	for relative in "${managed_files[@]}"; do
+		source="${IMAGE_RUNTIME_ROOT}/nginx/${relative}"
+		destination="${SERVER_ROOT}/nginx/${relative}"
+		[[ -f "$source" ]] || fatal "Image-owned Nginx file is missing: ${relative}."
+		mkdir -p "$(dirname -- "$destination")"
+		install -m 0644 -- "$source" "$destination"
+	done
+}
+
 prepare_nginx_runtime() {
 	local config="${SERVER_ROOT}/nginx/nginx.conf"
+	refresh_nginx_managed_files
 	[[ -f "$config" ]] || fatal "Nginx configuration is missing. Reinstall the server."
 	ensure_nginx_temp_directive "$config" uwsgi_temp_path "${TMP_DIR}/uwsgi"
 	ensure_nginx_temp_directive "$config" scgi_temp_path "${TMP_DIR}/scgi"
