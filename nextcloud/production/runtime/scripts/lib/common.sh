@@ -2,6 +2,8 @@
 # These constants are consumed by the other modules sourced by start.sh.
 # shellcheck disable=SC2034
 
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 readonly SERVER_ROOT="/home/container"
 readonly IMAGE_ROOT="/opt/nextcloud-egg"
 readonly IMAGE_RUNTIME_ROOT="${IMAGE_ROOT}/runtime"

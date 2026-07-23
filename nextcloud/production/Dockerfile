@@ -137,6 +137,12 @@ RUN set -eux; \
 	php8.4 -r 'exit(count(Imagick::queryFormats("SVG")) > 0 ? 0 : 1);'; \
 	node --input-type=module --eval \
 		"await Promise.all([import('./websocket_server/Services/SocketService.js'), import('./websocket_server/Services/VotingService.js')])"; \
+	grep -Fq 'readonly INSTALL_TMP="${SERVER_DIR}/.nextcloud-egg-install"' \
+		/opt/nextcloud-egg/install.sh; \
+	env -i STARTUP='command -v mariadbd >/dev/null' \
+		/bin/bash /opt/nextcloud-egg/entrypoint.sh; \
+	env -i /bin/bash -c \
+		'source /opt/nextcloud-egg/runtime/scripts/lib/common.sh; resolve_command mariadbd >/dev/null'; \
 	test "$(cat /opt/nextcloud-egg/IMAGE_API_VERSION)" = 1
 
 # Pterodactyl's installer must start as root; Wings overrides the runtime UID/GID.

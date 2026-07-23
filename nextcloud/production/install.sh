@@ -6,8 +6,13 @@ readonly SERVER_DIR=/mnt/server
 readonly IMAGE_ROOT=/opt/nextcloud-egg
 readonly RUNTIME_TEMPLATE_ROOT="${IMAGE_ROOT}/runtime"
 readonly EXPECTED_IMAGE_API_VERSION=1
-INSTALL_TMP="$(mktemp -d /tmp/nextcloud-egg.XXXXXX)"
-readonly INSTALL_TMP
+readonly INSTALL_TMP="${SERVER_DIR}/.nextcloud-egg-install"
+
+# Pterodactyl's installer container can expose a small /tmp. Keep the large
+# release archive and extracted core on the server volume instead.
+mkdir -p "$SERVER_DIR"
+rm -rf -- "$INSTALL_TMP"
+mkdir -p "$INSTALL_TMP"
 
 cleanup() {
 	rm -rf -- "$INSTALL_TMP"
@@ -117,6 +122,7 @@ download_nextcloud() {
 
 	rm -rf -- "$INSTALL_TMP/nextcloud"
 	unzip -q "$archive" -d "$INSTALL_TMP"
+	rm -f -- "$archive" "$checksum_file"
 }
 
 installed_nextcloud_version() {
@@ -177,7 +183,8 @@ install_or_repair_nextcloud() {
 
 	download_nextcloud "$requested_version"
 	log "Installing pristine Nextcloud core files."
-	rsync -a "${INSTALL_TMP}/nextcloud/" "$web_root/"
+	rmdir "$web_root"
+	mv -- "${INSTALL_TMP}/nextcloud" "$web_root"
 }
 
 mkdir -p "$SERVER_DIR" "${SERVER_DIR}/logs" "${SERVER_DIR}/tmp" "${SERVER_DIR}/.state"
