@@ -115,7 +115,8 @@ jobs:
               --env SERVER_PORT=18080 \
               --env JWT_SECRET="$TEST_SECRET" \
               --volume "$smoke_root:/home/container" \
-              "$IMAGE" >/dev/null
+              "$IMAGE" \
+              bash /opt/onlyoffice-egg/runtime/scripts/start.sh >/dev/null
           }
 
           wait_until_ready() {

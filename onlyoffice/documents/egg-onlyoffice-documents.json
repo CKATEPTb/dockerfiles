@@ -13,7 +13,7 @@
     "ghcr.io/ckateptb/dockerfiles:onlyoffice_documents": "ghcr.io/ckateptb/dockerfiles:onlyoffice_documents"
   },
   "file_denylist": [],
-  "startup": "bash /opt/onlyoffice-egg/runtime/start.sh",
+    "startup": "bash /opt/onlyoffice-egg/runtime/scripts/start.sh",
   "config": {
     "files": "{}",
     "startup": "{\"done\":\"ONLYOFFICE Docs successfully launched.\"}",
