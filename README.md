@@ -1,8 +1,14 @@
-This repository contains Pterodactyl eggs for deployment.
+# Pterodactyl eggs and container images
 
-Primarily created for personal use, so there is no detailed documentation or links here.
-Use the folder navigation to find the egg you need.
+This repository contains custom container images and importable Pterodactyl
+eggs. Deployment notes live beside each egg.
 
-Available images include the production Nextcloud runtime at
-`ghcr.io/ckateptb/dockerfiles:nextcloud_production`; its importable egg and
-documentation are in `nextcloud/production`.
+Custom image-backed eggs:
+
+| Application | Image | Egg and documentation |
+| --- | --- | --- |
+| Nextcloud Production | `ghcr.io/ckateptb/dockerfiles:nextcloud_production` | [`nextcloud/production`](nextcloud/production) |
+| ONLYOFFICE Docs | `ghcr.io/ckateptb/dockerfiles:onlyoffice_documents` | [`onlyoffice/documents`](onlyoffice/documents) |
+
+Both entries above delegate installation to their matching custom image, so
+only the egg JSON needs to be imported into a panel.

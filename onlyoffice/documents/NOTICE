@@ -1,0 +1,26 @@
+ONLYOFFICE Docs Pterodactyl packaging
+=====================================
+
+This directory contains build, installation, runtime, and Pterodactyl packaging
+for ONLYOFFICE Docs (also known as ONLYOFFICE DocumentServer).
+
+ONLYOFFICE DocumentServer is developed by Ascensio System SIA and contributors.
+It is distributed under the GNU Affero General Public License version 3. A copy
+of that license is provided in LICENSE-AGPL-3.0.
+
+Upstream project and corresponding source:
+https://github.com/ONLYOFFICE/DocumentServer
+
+Upstream container build source:
+https://github.com/ONLYOFFICE/Docker-DocumentServer
+
+Source for this Pterodactyl packaging and its container modifications:
+https://github.com/CKATEPTb/dockerfiles/tree/master/onlyoffice/documents
+
+The custom image is assembled from the upstream ONLYOFFICE DocumentServer image.
+Copyright notices, license files, source references, and branding shipped by
+upstream must be retained. ONLYOFFICE and its logos are trademarks of their
+respective owner; this independent packaging does not imply endorsement.
+
+Nothing in the repository-wide license grants additional rights to upstream
+ONLYOFFICE components. Each bundled component remains under its own license.

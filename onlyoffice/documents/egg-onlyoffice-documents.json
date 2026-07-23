@@ -1,0 +1,102 @@
+{
+  "_comment": "Pterodactyl PTDL_v2 egg for the custom ONLYOFFICE Docs image",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2026-07-23T00:00:00+02:00",
+  "name": "ONLYOFFICE Docs",
+  "author": "ckateptb@vivaldi.net",
+  "description": "Single-allocation ONLYOFFICE Docs for Pterodactyl. The custom image contains the installer and rootless runtime, serves HTTP and WebSocket traffic on the assigned port, enables JWT authentication, and keeps mutable state in the server volume. TLS is expected to terminate at an external reverse proxy such as Cloudflare.",
+  "features": null,
+  "docker_images": {
+    "ghcr.io/ckateptb/dockerfiles:onlyoffice_documents": "ghcr.io/ckateptb/dockerfiles:onlyoffice_documents"
+  },
+  "file_denylist": [],
+  "startup": "bash /opt/onlyoffice-egg/runtime/start.sh",
+  "config": {
+    "files": "{}",
+    "startup": "{\"done\":\"ONLYOFFICE Docs successfully launched.\"}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/usr/bin/env bash\nset -Eeuo pipefail\n\nreadonly IMAGE_INSTALLER=/opt/onlyoffice-egg/install.sh\n\nif [[ ! -x \"$IMAGE_INSTALLER\" ]]; then\n\tprintf '[Installer] ERROR: supported ONLYOFFICE Docs image is missing %s\\n' \"$IMAGE_INSTALLER\" >&2\n\texit 1\nfi\n\nexec \"$IMAGE_INSTALLER\"\n",
+      "container": "ghcr.io/ckateptb/dockerfiles:onlyoffice_documents",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": [
+    {
+      "name": "JWT Secret",
+      "description": "Shared secret used by ONLYOFFICE Docs and its Nextcloud connector. Leave empty to generate and persist a strong secret during installation.",
+      "env_variable": "JWT_SECRET",
+      "default_value": "",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "nullable|string|min:32|max:512",
+      "field_type": "text"
+    },
+    {
+      "name": "JWT Header",
+      "description": "HTTP header carrying the connector JWT. Configure the identical value in Nextcloud.",
+      "env_variable": "JWT_HEADER",
+      "default_value": "Authorization",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|min:1|max:64|regex:/^[A-Za-z0-9-]+$/",
+      "field_type": "text"
+    },
+    {
+      "name": "Allow Private Storage Addresses",
+      "description": "Permit document storage on private or local IP ranges. Keep disabled unless the trusted Nextcloud server is reachable only through a private address.",
+      "env_variable": "ALLOW_PRIVATE_IP_ADDRESS",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "field_type": "text"
+    },
+    {
+      "name": "Allow Untrusted Storage TLS",
+      "description": "Accept invalid or self-signed TLS certificates from document storage. Keep disabled for public or production Nextcloud instances.",
+      "env_variable": "USE_UNAUTHORIZED_STORAGE",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "field_type": "text"
+    },
+    {
+      "name": "Log Level",
+      "description": "Minimum ONLYOFFICE Docs application log severity.",
+      "env_variable": "LOG_LEVEL",
+      "default_value": "WARN",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|in:TRACE,DEBUG,INFO,WARN,ERROR,FATAL",
+      "field_type": "text"
+    },
+    {
+      "name": "Nginx Access Log",
+      "description": "Write one access-log entry per HTTP request. Disabled by default to keep the Pterodactyl console and disk usage compact.",
+      "env_variable": "NGINX_ACCESS_LOG",
+      "default_value": "0",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|boolean",
+      "field_type": "text"
+    },
+    {
+      "name": "Upload Limit",
+      "description": "Maximum request body accepted by the bundled Nginx server, for example 512M or 2G.",
+      "env_variable": "UPLOAD_LIMIT",
+      "default_value": "2G",
+      "user_viewable": true,
+      "user_editable": true,
+      "rules": "required|string|regex:/^[0-9]+[KMG]$/i",
+      "field_type": "text"
+    }
+  ]
+}

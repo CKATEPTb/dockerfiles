@@ -1,0 +1,169 @@
+name: build onlyoffice
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - onlyoffice/**
+      - .github/workflows/onlyoffice.yml
+
+concurrency:
+  group: onlyoffice-documents-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  validate:
+    name: validate egg and runtime
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run static contract checks
+        run: |
+          node onlyoffice/documents/scripts/check.mjs
+          node onlyoffice/documents/scripts/test-configure.mjs
+      - name: Check patch whitespace
+        run: git diff --check
+
+  build:
+    name: build multi-architecture candidate
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - id: lower-owner
+        name: Repository owner to lowercase
+        shell: bash
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./onlyoffice
+          file: ./onlyoffice/documents/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/${{ steps.lower-owner.outputs.owner }}/dockerfiles:onlyoffice_${{ github.sha }}
+          cache-from: type=gha,scope=onlyoffice-documents
+          cache-to: type=gha,mode=max,scope=onlyoffice-documents
+
+  smoke:
+    name: rootless runtime smoke test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - id: lower-owner
+        name: Repository owner to lowercase
+        shell: bash
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Start and verify the arbitrary-UID runtime
+        env:
+          IMAGE: ghcr.io/${{ steps.lower-owner.outputs.owner }}/dockerfiles:onlyoffice_${{ github.sha }}
+          TEST_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          smoke_root="$(mktemp -d)"
+          container_name=onlyoffice-smoke
+          cleanup() {
+            docker logs "$container_name" 2>/dev/null || true
+            docker rm -f "$container_name" >/dev/null 2>&1 || true
+            sudo rm -rf -- "$smoke_root"
+          }
+          trap cleanup EXIT
+
+          docker pull "$IMAGE"
+          test "$(docker image inspect --format '{{json .Config.Volumes}}' "$IMAGE")" = null
+          test "$(docker image inspect --format '{{json .Config.ExposedPorts}}' "$IMAGE")" = null
+          sudo chown 10001:10001 "$smoke_root"
+
+          start_container() {
+            docker run --detach \
+              --name "$container_name" \
+              --user 10001:10001 \
+              --publish 18080:18080 \
+              --env SERVER_PORT=18080 \
+              --env JWT_SECRET="$TEST_SECRET" \
+              --volume "$smoke_root:/home/container" \
+              "$IMAGE" >/dev/null
+          }
+
+          wait_until_ready() {
+            for _ in $(seq 1 300); do
+              if ! docker inspect --format '{{.State.Running}}' "$container_name" 2>/dev/null | grep -qx true; then
+                echo 'Container exited before it became ready.' >&2
+                return 1
+              fi
+              if curl -fsS --max-time 5 http://127.0.0.1:18080/healthcheck | grep -q true; then
+                return 0
+              fi
+              sleep 1
+            done
+            echo 'Timed out waiting for ONLYOFFICE Docs.' >&2
+            return 1
+          }
+
+          start_container
+          wait_until_ready
+          curl -fsS --max-time 15 \
+            http://127.0.0.1:18080/web-apps/apps/api/documents/api.js \
+            --output /dev/null
+          docker exec --user 10001:10001 "$container_name" \
+            nginx -t -c /home/container/runtime/nginx/nginx.conf -p /home/container
+          docker exec --user 10001:10001 "$container_name" \
+            grep -Fq 'proxy_set_header Upgrade $http_upgrade;' \
+            /home/container/runtime/nginx/includes/http-common.conf
+          test "$(sudo cat "$smoke_root/.secrets/jwt_secret")" = "$TEST_SECRET"
+          test "$(sudo stat -c '%a' "$smoke_root/.secrets/jwt_secret")" = 600
+          ! docker logs "$container_name" 2>&1 | grep -Fq "$TEST_SECRET"
+
+          original_secret="$(sudo cat "$smoke_root/.secrets/jwt_secret")"
+          docker stop --time 45 "$container_name" >/dev/null
+          docker rm "$container_name" >/dev/null
+          start_container
+          wait_until_ready
+          test "$(sudo cat "$smoke_root/.secrets/jwt_secret")" = "$original_secret"
+
+  publish:
+    name: publish validated stable tags
+    needs: smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - id: lower-owner
+        name: Repository owner to lowercase
+        shell: bash
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Promote the tested multi-architecture manifest
+        env:
+          REGISTRY: ghcr.io/${{ steps.lower-owner.outputs.owner }}/dockerfiles
+          CANDIDATE: ghcr.io/${{ steps.lower-owner.outputs.owner }}/dockerfiles:onlyoffice_${{ github.sha }}
+        run: |
+          docker buildx imagetools create \
+            --tag "${REGISTRY}:onlyoffice_documents" \
+            --tag "${REGISTRY}:onlyoffice_9.4" \
+            "$CANDIDATE"
