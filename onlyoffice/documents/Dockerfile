@@ -15,6 +15,14 @@ USER root
 RUN set -eux; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends nodejs rsync; \
+	documentserver_version="$(dpkg-query -W -f='${Version}' onlyoffice-documentserver)"; \
+	cache_tag="$(printf '%s' "$documentserver_version" | sha256sum | cut -c1-16)"; \
+	api_script=/var/www/onlyoffice/documentserver/web-apps/apps/api/documents/api.js; \
+	documentserver-flush-cache.sh --hash "$cache_tag" --restart false; \
+	test -s "$api_script"; \
+	grep -Fq "$cache_tag" "$api_script"; \
+	! grep -Fq '{{HASH_POSTFIX}}' "$api_script"; \
+	chmod 0644 "$api_script"; \
 	apt-get clean; \
 	rm -rf /var/lib/apt/lists/*; \
 	install -d -m 0755 \

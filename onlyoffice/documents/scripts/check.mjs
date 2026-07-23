@@ -256,6 +256,15 @@ function validateDockerfile(dockerfile) {
 		/chmod\s+-R\s+a\+rX\s+\/opt\/onlyoffice-egg\/upstream-config\b/.test(normalizedDockerfile),
 		`${DOCKERFILE}: captured official configuration must be readable by the arbitrary runtime UID`,
 	);
+	check(/documentserver-flush-cache\.sh\s+--hash\b/.test(normalizedDockerfile),
+		`${DOCKERFILE}: the official API script must be generated with a versioned cache hash`);
+	check(
+		/api_script=\/var\/www\/onlyoffice\/documentserver\/web-apps\/apps\/api\/documents\/api\.js\b/
+			.test(normalizedDockerfile),
+		`${DOCKERFILE}: the generated Docs API script path must stay explicit and version-matched`,
+	);
+	check(/test\s+-s\s+["']\$api_script["']/.test(normalizedDockerfile),
+		`${DOCKERFILE}: the generated Docs API script must be verified during the image build`);
 
 	const exposeLines = significantLines.filter((line) => /^EXPOSE\s+/i.test(line));
 	const exposedPorts = exposeLines.flatMap((line) => line
