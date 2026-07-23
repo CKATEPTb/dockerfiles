@@ -105,6 +105,7 @@ RUN set -eux; \
 		rsync \
 		tar \
 		unzip \
+		util-linux \
 		xz-utils; \
 	apt-get purge -y --auto-remove gnupg; \
 	apt-get clean; \
@@ -130,7 +131,7 @@ RUN set -eux; \
 		/opt/nextcloud-egg/runtime/scripts/lib/*.sh; \
 	for command_name in \
 		chromium ffmpeg mariadb mariadb-admin mariadb-dump mariadb-install-db mariadbd \
-		nginx node npm php8.4 php-fpm8.4 redis-cli redis-server rsync; do \
+		nginx node npm php8.4 php-fpm8.4 redis-cli redis-server rsync setpriv; do \
 		command -v "$command_name" >/dev/null; \
 	done; \
 	php8.4 -r 'foreach (["apcu", "imagick", "redis"] as $extension) { if (!extension_loaded($extension)) { fwrite(STDERR, "Missing PHP extension: $extension\n"); exit(1); } }'; \
@@ -143,6 +144,13 @@ RUN set -eux; \
 		/bin/bash /opt/nextcloud-egg/entrypoint.sh; \
 	env -i /bin/bash -c \
 		'source /opt/nextcloud-egg/runtime/scripts/lib/common.sh; resolve_command mariadbd >/dev/null'; \
+	cp -a /opt/nextcloud-egg/runtime/nginx /home/container/nginx; \
+	install -d /home/container/logs /home/container/www \
+		/home/container/tmp/{client-body,fastcgi,proxy,scgi,uwsgi}; \
+	chown -R 65534:65534 /home/container; \
+	setpriv --reuid=65534 --regid=65534 --clear-groups \
+		nginx -t -c /home/container/nginx/nginx.conf -p /home/container; \
+	rm -rf /home/container/logs /home/container/nginx /home/container/tmp /home/container/www; \
 	test "$(cat /opt/nextcloud-egg/IMAGE_API_VERSION)" = 1
 
 # Pterodactyl's installer must start as root; Wings overrides the runtime UID/GID.

@@ -167,7 +167,40 @@ start_whiteboard() {
 	wait_for_tcp 127.0.0.1 3002 "Whiteboard backend" 60
 }
 
+ensure_nginx_temp_directive() {
+	local config="$1"
+	local directive="$2"
+	local directory="$3"
+	local temporary
+
+	mkdir -p "$directory"
+	if grep -Eq "^[[:space:]]*${directive}[[:space:]]" "$config"; then
+		return 0
+	fi
+
+	log "Updating the persistent Nginx config with ${directive}."
+	temporary="$(mktemp "${TMP_DIR}/nginx-config.XXXXXX")"
+	if ! awk -v line="\t${directive} ${directory};" '
+		{ print }
+		!inserted && /^[[:space:]]*proxy_temp_path[[:space:]]/ { print line; inserted = 1 }
+		END { if (!inserted) exit 1 }
+	' "$config" > "$temporary"; then
+		rm -f -- "$temporary"
+		fatal "Could not update the legacy Nginx temp-path configuration. Reinstall the server with the current egg."
+	fi
+	mv -- "$temporary" "$config"
+	chmod 0644 "$config"
+}
+
+prepare_nginx_runtime() {
+	local config="${SERVER_ROOT}/nginx/nginx.conf"
+	[[ -f "$config" ]] || fatal "Nginx configuration is missing. Reinstall the server."
+	ensure_nginx_temp_directive "$config" uwsgi_temp_path "${TMP_DIR}/uwsgi"
+	ensure_nginx_temp_directive "$config" scgi_temp_path "${TMP_DIR}/scgi"
+}
+
 start_nginx() {
+	prepare_nginx_runtime
 	log "Validating and starting Nginx on the Pterodactyl allocation."
 	nginx -t -c "${SERVER_ROOT}/nginx/nginx.conf" -p "$SERVER_ROOT"
 	nginx -c "${SERVER_ROOT}/nginx/nginx.conf" -p "$SERVER_ROOT" &

@@ -65,6 +65,8 @@ ensure_directories() {
 		"${TMP_DIR}/client-body" \
 		"${TMP_DIR}/fastcgi" \
 		"${TMP_DIR}/proxy" \
+		"${TMP_DIR}/uwsgi" \
+		"${TMP_DIR}/scgi" \
 		"${SERVER_ROOT}/services/whiteboard-recordings"
 	chmod 700 "$SECRETS_DIR"
 }
