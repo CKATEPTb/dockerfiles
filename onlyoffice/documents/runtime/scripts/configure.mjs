@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -87,7 +88,6 @@ function replaceAllLiteral(value, search, replacement) {
 const serverRoot = requiredEnvironment('SERVER_ROOT');
 const imageRuntimeRoot = requiredEnvironment('IMAGE_RUNTIME_ROOT');
 const upstreamConfigRoot = requiredEnvironment('UPSTREAM_CONFIG_ROOT');
-const upstreamNginxIncludes = requiredEnvironment('UPSTREAM_NGINX_INCLUDES');
 const runtimeConfigDir = requiredEnvironment('RUNTIME_CONFIG_DIR');
 const nginxDir = requiredEnvironment('NGINX_DIR');
 const logDir = requiredEnvironment('LOG_DIR');
@@ -122,6 +122,10 @@ const jwtSecret = fs.readFileSync(jwtSecretFile, 'utf8').replace(/[\r\n]+$/u, ''
 const secureLinkSecret = fs.readFileSync(secureLinkSecretFile, 'utf8').replace(/[\r\n]+$/u, '');
 if (jwtSecret.length < 32 || jwtSecret.length > 512) fail('The persistent JWT secret has an invalid length.');
 if (!/^[a-f0-9]{64}$/i.test(secureLinkSecret)) fail('The persistent secure-link secret is invalid.');
+const cacheTag = createHash('sha256')
+	.update(process.env.ONLYOFFICE_VERSION || 'unknown')
+	.digest('hex')
+	.slice(0, 16);
 
 copyDirectory(upstreamConfigRoot, runtimeConfigDir);
 
@@ -152,6 +156,7 @@ if (booleanEnvironment('USE_UNAUTHORIZED_STORAGE', false)) {
 }
 setNested(localConfig, ['wopi', 'enable'], false);
 setNested(localConfig, ['runtimeConfig', 'filePath'], path.join(dataDir, 'onlyoffice-data', 'runtime.json'));
+setNested(localConfig, ['log', 'filePath'], path.join(runtimeConfigDir, 'log4js', 'production.json'));
 setNested(localConfig, ['storage', 'fs', 'secretString'], secureLinkSecret);
 setNested(localConfig, ['persistentStorage', 'fs', 'secretString'], secureLinkSecret);
 writeFileAtomically(localJsonPath, `${JSON.stringify(localConfig, null, 2)}\n`);
@@ -166,7 +171,6 @@ const includesDir = path.join(nginxDir, 'includes');
 fs.rmSync(nginxDir, { recursive: true, force: true });
 fs.mkdirSync(includesDir, { recursive: true });
 copyDirectoryContents(path.join(nginxSeedDir, 'includes'), includesDir);
-copyDirectoryContents(upstreamNginxIncludes, includesDir);
 
 const templateCandidates = [
 	path.join(nginxSeedDir, 'ds.conf.tmpl'),
@@ -196,7 +200,11 @@ const httpCommonTemplate = fs.readFileSync(
 	path.join(imageRuntimeRoot, 'nginx', 'http-common.conf.tmpl'),
 	'utf8',
 );
-writeFileAtomically(path.join(includesDir, 'http-common.conf'), httpCommonTemplate, 0o644);
+writeFileAtomically(
+	path.join(includesDir, 'http-common.conf'),
+	replaceAllLiteral(httpCommonTemplate, '__CACHE_TAG__', cacheTag),
+	0o644,
+);
 
 const commonIncludePath = path.join(includesDir, 'ds-common.conf');
 if (!fs.existsSync(commonIncludePath)) fail('The official ds-common.conf include is missing.');

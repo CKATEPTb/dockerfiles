@@ -216,6 +216,7 @@ function validateEgg(egg) {
 }
 
 function validateDockerfile(dockerfile) {
+	const normalizedDockerfile = dockerfile.replace(/\\\r?\n/g, ' ');
 	const significantLines = dockerfile
 		.split(/\r?\n/)
 		.map((line) => line.replace(/\s+#.*$/, '').trim())
@@ -250,6 +251,10 @@ function validateDockerfile(dockerfile) {
 	check(!/^VOLUME(?:\s|\[)/im.test(dockerfile),
 		`${DOCKERFILE}: VOLUME instructions are forbidden; Pterodactyl owns persistence`);
 	check(!/^EXPOSE\s+.*\/udp\b/im.test(dockerfile), `${DOCKERFILE}: UDP ports must not be exposed`);
+	check(
+		/chmod\s+-R\s+a\+rX\s+\/opt\/onlyoffice-egg\/upstream-config\b/.test(normalizedDockerfile),
+		`${DOCKERFILE}: captured official configuration must be readable by the arbitrary runtime UID`,
+	);
 
 	const exposeLines = significantLines.filter((line) => /^EXPOSE\s+/i.test(line));
 	const exposedPorts = exposeLines.flatMap((line) => line

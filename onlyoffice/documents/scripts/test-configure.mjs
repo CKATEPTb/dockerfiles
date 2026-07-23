@@ -22,7 +22,6 @@ function nested(value, keys) {
 try {
 	const serverRoot = path.join(temporaryRoot, 'server');
 	const upstreamConfigRoot = path.join(temporaryRoot, 'upstream-config');
-	const upstreamNginxIncludes = path.join(temporaryRoot, 'upstream-nginx-includes');
 	const runtimeConfigDir = path.join(serverRoot, 'runtime', 'config');
 	const nginxDir = path.join(serverRoot, 'runtime', 'nginx');
 	const logDir = path.join(serverRoot, 'logs');
@@ -33,7 +32,6 @@ try {
 	const secureLinkSecret = 'b'.repeat(64);
 
 	fs.mkdirSync(path.join(upstreamConfigRoot, 'nginx', 'includes'), { recursive: true });
-	fs.mkdirSync(upstreamNginxIncludes, { recursive: true });
 	fs.mkdirSync(secretsDir, { recursive: true });
 	writeJson(path.join(upstreamConfigRoot, 'local.json'), {});
 	writeJson(path.join(upstreamConfigRoot, 'log4js', 'production.json'), {
@@ -56,7 +54,6 @@ error_log /var/log/onlyoffice/documentserver/nginx.error.log;
 	fs.writeFileSync(path.join(upstreamConfigRoot, 'nginx', 'includes', 'ds-docservice.conf'), `
 location / { proxy_pass http://docservice; }
 `);
-	fs.writeFileSync(path.join(upstreamNginxIncludes, 'ds-cache.conf'), 'set $cache_tag "test";\n');
 	fs.writeFileSync(path.join(secretsDir, 'jwt_secret'), jwtSecret, { mode: 0o600 });
 	fs.writeFileSync(path.join(secretsDir, 'secure_link_secret'), secureLinkSecret, { mode: 0o600 });
 
@@ -65,7 +62,6 @@ location / { proxy_pass http://docservice; }
 		SERVER_ROOT: serverRoot,
 		IMAGE_RUNTIME_ROOT: path.join(projectRoot, 'runtime'),
 		UPSTREAM_CONFIG_ROOT: upstreamConfigRoot,
-		UPSTREAM_NGINX_INCLUDES: upstreamNginxIncludes,
 		RUNTIME_CONFIG_DIR: runtimeConfigDir,
 		NGINX_DIR: nginxDir,
 		LOG_DIR: logDir,
@@ -82,6 +78,7 @@ location / { proxy_pass http://docservice; }
 		UPLOAD_LIMIT: '2G',
 		NGINX_WORKER_PROCESSES: '2',
 		NGINX_WORKER_CONNECTIONS: '2048',
+		ONLYOFFICE_VERSION: '9.4.0-129',
 	};
 	const configure = spawnSync(
 		process.execPath,
@@ -107,6 +104,10 @@ location / { proxy_pass http://docservice; }
 	);
 	assert.equal(nested(localConfig, ['storage', 'fs', 'secretString']), secureLinkSecret);
 	assert.equal(nested(localConfig, ['wopi', 'enable']), false);
+	assert.equal(
+		nested(localConfig, ['log', 'filePath']),
+		path.join(runtimeConfigDir, 'log4js', 'production.json'),
+	);
 
 	const documentServerConfig = fs.readFileSync(path.join(nginxDir, 'ds.conf'), 'utf8');
 	assert.match(documentServerConfig, /listen 0\.0\.0\.0:15432;/);
@@ -115,7 +116,12 @@ location / { proxy_pass http://docservice; }
 	const commonInclude = fs.readFileSync(path.join(nginxDir, 'includes', 'ds-common.conf'), 'utf8');
 	assert.match(commonInclude, /client_max_body_size 2G;/);
 	assert.match(commonInclude, /access_log off;/);
-	assert.equal(fs.readFileSync(path.join(nginxDir, 'includes', 'ds-cache.conf'), 'utf8'), 'set $cache_tag "test";\n');
+	const httpCommon = fs.readFileSync(path.join(nginxDir, 'includes', 'http-common.conf'), 'utf8');
+	assert.match(httpCommon, /map \$http_x_forwarded_host \$the_host/);
+	assert.match(httpCommon, /map \$host \$cache_tag/);
+	assert.match(httpCommon, /default "[a-f0-9]{16}";/);
+	assert.match(httpCommon, /proxy_set_header Host \$the_host;/);
+	assert.doesNotMatch(httpCommon, /__CACHE_TAG__/);
 
 	const unsafeHeader = spawnSync(
 		process.execPath,

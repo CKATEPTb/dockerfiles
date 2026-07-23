@@ -22,6 +22,7 @@ service_is_running() {
 
 prepare_runtime_configuration() {
 	local node
+	local status=0
 	node="$(resolve_command node)"
 	ensure_runtime_secret jwt_secret "${JWT_SECRET:-}"
 	ensure_runtime_secret secure_link_secret ''
@@ -30,7 +31,6 @@ prepare_runtime_configuration() {
 	SERVER_ROOT="$SERVER_ROOT" \
 	IMAGE_RUNTIME_ROOT="$IMAGE_RUNTIME_ROOT" \
 	UPSTREAM_CONFIG_ROOT="$UPSTREAM_CONFIG_ROOT" \
-	UPSTREAM_NGINX_INCLUDES="$UPSTREAM_NGINX_INCLUDES" \
 	RUNTIME_CONFIG_DIR="$RUNTIME_CONFIG_DIR" \
 	NGINX_DIR="$NGINX_DIR" \
 	LOG_DIR="$LOG_DIR" \
@@ -47,7 +47,10 @@ prepare_runtime_configuration() {
 	UPLOAD_LIMIT="${UPLOAD_LIMIT:-1G}" \
 	NGINX_WORKER_PROCESSES="${NGINX_WORKER_PROCESSES:-1}" \
 	NGINX_WORKER_CONNECTIONS="${NGINX_WORKER_CONNECTIONS:-4096}" \
-		"$node" "${IMAGE_RUNTIME_ROOT}/scripts/configure.mjs"
+	ONLYOFFICE_VERSION="$(onlyoffice_version)" \
+		"$node" "${IMAGE_RUNTIME_ROOT}/scripts/configure.mjs" || status=$?
+	[[ "$status" -eq 0 ]] \
+		|| fatal "The runtime configuration renderer failed (exit ${status})."
 }
 
 start_docservice() {

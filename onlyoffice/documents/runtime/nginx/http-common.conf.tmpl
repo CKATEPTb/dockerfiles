@@ -10,9 +10,15 @@ upstream example {
 	server 127.0.0.1:3000;
 }
 
-map $http_host $onlyoffice_host {
+map $http_host $this_host {
 	"" $host;
 	default $http_host;
+}
+
+map $http_x_forwarded_host $the_host {
+	"" $this_host;
+	~^\s*([^,\s]+) $1;
+	default $this_host;
 }
 
 map $http_x_forwarded_proto $the_scheme {
@@ -31,9 +37,13 @@ map $http_x_forwarded_prefix $the_prefix {
 	default $http_x_forwarded_prefix;
 }
 
-proxy_set_header Host $onlyoffice_host;
+map $host $cache_tag {
+	default "__CACHE_TAG__";
+}
+
+proxy_set_header Host $the_host;
 proxy_set_header Upgrade $http_upgrade;
 proxy_set_header Connection $proxy_connection;
-proxy_set_header X-Forwarded-Host $onlyoffice_host;
+proxy_set_header X-Forwarded-Host $the_host;
 proxy_set_header X-Forwarded-Proto $the_scheme;
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

@@ -19,12 +19,9 @@ RUN set -eux; \
 	rm -rf /var/lib/apt/lists/*; \
 	install -d -m 0755 \
 		/home/container \
-		/opt/onlyoffice-egg/upstream-config \
-		/opt/onlyoffice-egg/upstream-nginx-includes; \
+		/opt/onlyoffice-egg/upstream-config; \
 	cp -a /etc/onlyoffice/documentserver/. /opt/onlyoffice-egg/upstream-config/; \
-	if [[ -d /etc/nginx/includes ]]; then \
-		cp -a /etc/nginx/includes/. /opt/onlyoffice-egg/upstream-nginx-includes/; \
-	fi
+	chmod -R a+rX /opt/onlyoffice-egg/upstream-config
 
 COPY documents/runtime/ /opt/onlyoffice-egg/runtime/
 COPY documents/entrypoint.sh documents/install.sh documents/IMAGE_API_VERSION /opt/onlyoffice-egg/

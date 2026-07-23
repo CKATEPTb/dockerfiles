@@ -85,7 +85,16 @@ jobs:
           smoke_root="$(mktemp -d)"
           container_name=onlyoffice-smoke
           cleanup() {
+            docker inspect \
+              --format 'container-state={{json .State}}' \
+              "$container_name" 2>/dev/null || true
             docker logs "$container_name" 2>/dev/null || true
+            if [[ -d "$smoke_root/logs" ]]; then
+              while IFS= read -r log_file; do
+                echo "===== ${log_file#"$smoke_root"/} ====="
+                sudo tail -n 100 "$log_file" || true
+              done < <(find "$smoke_root/logs" -type f -print | sort)
+            fi
             docker rm -f "$container_name" >/dev/null 2>&1 || true
             sudo rm -rf -- "$smoke_root"
           }

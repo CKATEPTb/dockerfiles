@@ -7,7 +7,6 @@ readonly SERVER_ROOT=/home/container
 readonly IMAGE_ROOT=/opt/onlyoffice-egg
 readonly IMAGE_RUNTIME_ROOT="${IMAGE_ROOT}/runtime"
 readonly UPSTREAM_CONFIG_ROOT="${IMAGE_ROOT}/upstream-config"
-readonly UPSTREAM_NGINX_INCLUDES="${IMAGE_ROOT}/upstream-nginx-includes"
 readonly EXPECTED_IMAGE_API_VERSION=1
 readonly STATE_DIR="${SERVER_ROOT}/.state"
 readonly SECRETS_DIR="${SERVER_ROOT}/.secrets"
