@@ -28,7 +28,7 @@ Maintenance
 
 Logs
   logs                          Show live-stream and raw-log locations.
-  logs:tail <source> [lines]    Raw tail: nextcloud, audit, nginx, nginx-error.
+  logs:tail <source> [lines]    Raw tail; use "help logs" for source names.
 
 Advanced
   occ [command] [arguments...]  Run any native Nextcloud command.
@@ -50,7 +50,7 @@ EOF
 			printf '%s\n' "update [--backup]" "  Repeats the official updater without skipping major versions." "  --backup creates a full files/database backup before the first update pass."
 			;;
 		logs|logs:tail)
-			printf '%s\n' "logs" "logs:tail <nextcloud|audit|nginx|nginx-error> [1-500]"
+			printf '%s\n' "logs" "logs:tail <nextcloud|audit|nginx|nginx-error|mariadb|redis|php-fpm|php-errors|whiteboard> [1-500]"
 			;;
 		user:password)
 			printf '%s\n' "user:password <username> [password]" "  Without a password, generates a temporary one and prints it once."
@@ -126,6 +126,11 @@ Raw files:
   audit      ${LOG_DIR}/audit.log
   nginx      ${LOG_DIR}/nginx-access.log
   nginx-error ${LOG_DIR}/nginx-error.log
+  mariadb    ${LOG_DIR}/mariadb.log
+  redis      ${LOG_DIR}/redis.log
+  php-fpm    ${LOG_DIR}/php-fpm.log
+  php-errors ${LOG_DIR}/php-errors.log
+  whiteboard ${LOG_DIR}/whiteboard.log
 EOF
 }
 
@@ -138,8 +143,13 @@ console_log_tail() {
 		audit) file="${LOG_DIR}/audit.log" ;;
 		nginx) file="${LOG_DIR}/nginx-access.log" ;;
 		nginx-error) file="${LOG_DIR}/nginx-error.log" ;;
+		mariadb) file="${LOG_DIR}/mariadb.log" ;;
+		redis) file="${LOG_DIR}/redis.log" ;;
+		php-fpm) file="${LOG_DIR}/php-fpm.log" ;;
+		php-errors) file="${LOG_DIR}/php-errors.log" ;;
+		whiteboard) file="${LOG_DIR}/whiteboard.log" ;;
 		*)
-			warn "Usage: logs:tail <nextcloud|audit|nginx|nginx-error> [1-500]"
+			warn "Usage: logs:tail <nextcloud|audit|nginx|nginx-error|mariadb|redis|php-fpm|php-errors|whiteboard> [1-500]"
 			return 2
 			;;
 	esac
