@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -95,6 +94,7 @@ const tmpDir = requiredEnvironment('TMP_DIR');
 const dataDir = requiredEnvironment('DATA_DIR');
 const jwtSecretFile = requiredEnvironment('JWT_SECRET_FILE');
 const secureLinkSecretFile = requiredEnvironment('SECURE_LINK_SECRET_FILE');
+const assetCacheTagFile = requiredEnvironment('ASSET_CACHE_TAG_FILE');
 
 for (const generatedPath of [runtimeConfigDir, nginxDir]) {
 	const relative = path.relative(serverRoot, generatedPath);
@@ -120,12 +120,10 @@ if (!allowedLogLevels.has(logLevel)) fail(`Unsupported LOG_LEVEL: ${logLevel}.`)
 
 const jwtSecret = fs.readFileSync(jwtSecretFile, 'utf8').replace(/[\r\n]+$/u, '');
 const secureLinkSecret = fs.readFileSync(secureLinkSecretFile, 'utf8').replace(/[\r\n]+$/u, '');
+const cacheTag = fs.readFileSync(assetCacheTagFile, 'utf8').trim();
 if (jwtSecret.length < 32 || jwtSecret.length > 512) fail('The persistent JWT secret has an invalid length.');
 if (!/^[a-f0-9]{64}$/i.test(secureLinkSecret)) fail('The persistent secure-link secret is invalid.');
-const cacheTag = createHash('sha256')
-	.update(process.env.ONLYOFFICE_VERSION || 'unknown')
-	.digest('hex')
-	.slice(0, 16);
+if (!/^[a-f0-9]{16}$/.test(cacheTag)) fail('The image asset cache tag is invalid.');
 
 copyDirectory(upstreamConfigRoot, runtimeConfigDir);
 

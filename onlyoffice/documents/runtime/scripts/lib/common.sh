@@ -7,6 +7,7 @@ readonly SERVER_ROOT=/home/container
 readonly IMAGE_ROOT=/opt/onlyoffice-egg
 readonly IMAGE_RUNTIME_ROOT="${IMAGE_ROOT}/runtime"
 readonly UPSTREAM_CONFIG_ROOT="${IMAGE_ROOT}/upstream-config"
+readonly ASSET_CACHE_TAG_FILE="${IMAGE_ROOT}/ASSET_CACHE_TAG"
 readonly EXPECTED_IMAGE_API_VERSION=1
 readonly STATE_DIR="${SERVER_ROOT}/.state"
 readonly SECRETS_DIR="${SERVER_ROOT}/.secrets"
@@ -107,8 +108,20 @@ validate_runtime() {
 	[[ "$(id -u)" -ne 0 ]] \
 		|| fatal 'The runtime must be started by Wings as the unprivileged Pterodactyl user.'
 	[[ -d "$UPSTREAM_CONFIG_ROOT" ]] || fatal 'The official ONLYOFFICE configuration seed is missing.'
+	if [[ ! -r "$ASSET_CACHE_TAG_FILE" ]] \
+		|| ! grep -Eq '^[a-f0-9]{16}$' "$ASSET_CACHE_TAG_FILE"; then
+		fatal 'The image asset cache tag is missing or invalid.'
+	fi
 	[[ -x "${DOCSERVICE_ROOT}/server/DocService/docservice" ]] || fatal 'DocService is missing from the image.'
 	[[ -x "${DOCSERVICE_ROOT}/server/FileConverter/converter" ]] || fatal 'Converter is missing from the image.'
+	for required_asset in \
+		"${DOCSERVICE_ROOT}/web-apps/apps/api/documents/api.js" \
+		"${DOCSERVICE_ROOT}/sdkjs/common/AllFonts.js" \
+		"${DOCSERVICE_ROOT}/server/FileConverter/bin/AllFonts.js" \
+		"${DOCSERVICE_ROOT}/server/FileConverter/bin/font_selection.bin"; do
+		[[ -s "$required_asset" && -r "$required_asset" ]] \
+			|| fatal "Required generated asset is missing or unreadable: ${required_asset}."
+	done
 	for command_name in curl nginx node openssl rsync; do
 		resolve_command "$command_name" >/dev/null
 	done

@@ -39,6 +39,7 @@ prepare_runtime_configuration() {
 	DATA_DIR="$DATA_DIR" \
 	JWT_SECRET_FILE="${SECRETS_DIR}/jwt_secret" \
 	SECURE_LINK_SECRET_FILE="${SECRETS_DIR}/secure_link_secret" \
+	ASSET_CACHE_TAG_FILE="$ASSET_CACHE_TAG_FILE" \
 	SERVER_PORT="${SERVER_PORT:-8080}" \
 	JWT_HEADER="${JWT_HEADER:-Authorization}" \
 	ALLOW_PRIVATE_IP_ADDRESS="${ALLOW_PRIVATE_IP_ADDRESS:-0}" \
@@ -48,7 +49,6 @@ prepare_runtime_configuration() {
 	UPLOAD_LIMIT="${UPLOAD_LIMIT:-1G}" \
 	NGINX_WORKER_PROCESSES="${NGINX_WORKER_PROCESSES:-1}" \
 	NGINX_WORKER_CONNECTIONS="${NGINX_WORKER_CONNECTIONS:-4096}" \
-	ONLYOFFICE_VERSION="$(onlyoffice_version)" \
 		"$node" "${IMAGE_RUNTIME_ROOT}/scripts/configure.mjs" || status=$?
 	[[ "$status" -eq 0 ]] \
 		|| fatal "The runtime configuration renderer failed (exit ${status})."

@@ -16,13 +16,33 @@ RUN set -eux; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends nodejs rsync; \
 	documentserver_version="$(dpkg-query -W -f='${Version}' onlyoffice-documentserver)"; \
-	cache_tag="$(printf '%s' "$documentserver_version" | sha256sum | cut -c1-16)"; \
 	api_script=/var/www/onlyoffice/documentserver/web-apps/apps/api/documents/api.js; \
+	all_fonts_web=/var/www/onlyoffice/documentserver/sdkjs/common/AllFonts.js; \
+	all_fonts_converter=/var/www/onlyoffice/documentserver/server/FileConverter/bin/AllFonts.js; \
+	font_selection=/var/www/onlyoffice/documentserver/server/FileConverter/bin/font_selection.bin; \
+	asset_cache_tag_file=/opt/onlyoffice-egg/ASSET_CACHE_TAG; \
+	documentserver-generate-allfonts.sh true true; \
+	cache_tag="$( \
+		{ \
+			printf '%s\n' "$documentserver_version"; \
+			sha256sum "$all_fonts_web" "$all_fonts_converter" "$font_selection"; \
+		} | sha256sum | cut -c1-16 \
+	)"; \
+	install -d -m 0755 "$(dirname "$asset_cache_tag_file")"; \
+	printf '%s\n' "$cache_tag" > "$asset_cache_tag_file"; \
 	documentserver-flush-cache.sh --hash "$cache_tag" --restart false; \
 	test -s "$api_script"; \
 	grep -Fq "$cache_tag" "$api_script"; \
 	! grep -Fq '{{HASH_POSTFIX}}' "$api_script"; \
-	chmod 0644 "$api_script"; \
+	test -s "$all_fonts_web"; \
+	test -s "$all_fonts_converter"; \
+	test -s "$font_selection"; \
+	chmod 0644 \
+		"$api_script" \
+		"$all_fonts_web" \
+		"$all_fonts_converter" \
+		"$font_selection" \
+		"$asset_cache_tag_file"; \
 	apt-get clean; \
 	rm -rf /var/lib/apt/lists/*; \
 	install -d -m 0755 \

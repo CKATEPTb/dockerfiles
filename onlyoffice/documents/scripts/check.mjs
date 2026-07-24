@@ -258,6 +258,14 @@ function validateDockerfile(dockerfile) {
 	);
 	check(/documentserver-flush-cache\.sh\s+--hash\b/.test(normalizedDockerfile),
 		`${DOCKERFILE}: the official API script must be generated with a versioned cache hash`);
+	check(/documentserver-generate-allfonts\.sh\s+true\s+true\b/.test(normalizedDockerfile),
+		`${DOCKERFILE}: the official font metadata must be generated without restarting services`);
+	check(normalizedDockerfile.includes(
+		'asset_cache_tag_file=/opt/onlyoffice-egg/ASSET_CACHE_TAG'),
+		`${DOCKERFILE}: the generated asset cache tag must be baked into the image`);
+	check(/sha256sum\s+["']\$all_fonts_web["']\s+["']\$all_fonts_converter["']\s+["']\$font_selection["']/
+		.test(normalizedDockerfile),
+		`${DOCKERFILE}: the cache tag must change when generated font assets change`);
 	check(
 		/api_script=\/var\/www\/onlyoffice\/documentserver\/web-apps\/apps\/api\/documents\/api\.js\b/
 			.test(normalizedDockerfile),
@@ -265,6 +273,16 @@ function validateDockerfile(dockerfile) {
 	);
 	check(/test\s+-s\s+["']\$api_script["']/.test(normalizedDockerfile),
 		`${DOCKERFILE}: the generated Docs API script must be verified during the image build`);
+	for (const [variable, expectedPath] of [
+		['all_fonts_web', '/var/www/onlyoffice/documentserver/sdkjs/common/AllFonts.js'],
+		['all_fonts_converter', '/var/www/onlyoffice/documentserver/server/FileConverter/bin/AllFonts.js'],
+		['font_selection', '/var/www/onlyoffice/documentserver/server/FileConverter/bin/font_selection.bin'],
+	]) {
+		check(normalizedDockerfile.includes(`${variable}=${expectedPath}`),
+			`${DOCKERFILE}: ${variable} must keep its version-matched generated asset path`);
+		check(new RegExp(`test\\s+-s\\s+["']\\$${variable}["']`).test(normalizedDockerfile),
+			`${DOCKERFILE}: ${variable} must be verified during the image build`);
+	}
 
 	const exposeLines = significantLines.filter((line) => /^EXPOSE\s+/i.test(line));
 	const exposedPorts = exposeLines.flatMap((line) => line
@@ -276,7 +294,7 @@ function validateDockerfile(dockerfile) {
 		`${DOCKERFILE}: at most one public HTTP port may be exposed`);
 }
 
-function validateRuntimeSecurity(configureScript) {
+function validateRuntimeConfiguration(configureScript) {
 	const requiredDefaults = [
 		[/\bconst\s+JWT_ENABLED\s*=\s*true\s*;/, 'JWT must always be enabled'],
 		[/\bconst\s+JWT_IN_BODY\s*=\s*false\s*;/, 'JWT tokens in request bodies must stay disabled'],
@@ -292,6 +310,11 @@ function validateRuntimeSecurity(configureScript) {
 	for (const [pattern, description] of requiredDefaults) {
 		check(pattern.test(configureScript), `runtime/scripts/configure.mjs: ${description}`);
 	}
+
+	check(configureScript.includes("requiredEnvironment('ASSET_CACHE_TAG_FILE')"),
+		'runtime/scripts/configure.mjs: the baked asset cache tag must be required');
+	check(configureScript.includes("if (!/^[a-f0-9]{16}$/.test(cacheTag))"),
+		'runtime/scripts/configure.mjs: the baked asset cache tag must be strictly validated');
 }
 
 async function validateRequiredFiles() {
@@ -381,7 +404,7 @@ async function main() {
 		validateDockerfile(await readText(DOCKERFILE));
 	}
 	if (existsSync(path.join(ROOT, 'runtime/scripts/configure.mjs'))) {
-		validateRuntimeSecurity(await readText('runtime/scripts/configure.mjs'));
+		validateRuntimeConfiguration(await readText('runtime/scripts/configure.mjs'));
 	}
 
 	validateShellScripts(files);

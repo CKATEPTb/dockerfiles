@@ -30,6 +30,8 @@ try {
 	const secretsDir = path.join(serverRoot, '.secrets');
 	const jwtSecret = 'a'.repeat(64);
 	const secureLinkSecret = 'b'.repeat(64);
+	const assetCacheTag = 'c'.repeat(16);
+	const assetCacheTagFile = path.join(temporaryRoot, 'ASSET_CACHE_TAG');
 
 	fs.mkdirSync(path.join(upstreamConfigRoot, 'nginx', 'includes'), { recursive: true });
 	fs.mkdirSync(secretsDir, { recursive: true });
@@ -56,6 +58,7 @@ location / { proxy_pass http://docservice; }
 `);
 	fs.writeFileSync(path.join(secretsDir, 'jwt_secret'), jwtSecret, { mode: 0o600 });
 	fs.writeFileSync(path.join(secretsDir, 'secure_link_secret'), secureLinkSecret, { mode: 0o600 });
+	fs.writeFileSync(assetCacheTagFile, `${assetCacheTag}\n`, { mode: 0o644 });
 
 	const environment = {
 		...process.env,
@@ -69,6 +72,7 @@ location / { proxy_pass http://docservice; }
 		DATA_DIR: dataDir,
 		JWT_SECRET_FILE: path.join(secretsDir, 'jwt_secret'),
 		SECURE_LINK_SECRET_FILE: path.join(secretsDir, 'secure_link_secret'),
+		ASSET_CACHE_TAG_FILE: assetCacheTagFile,
 		SERVER_PORT: '15432',
 		JWT_HEADER: 'Authorization',
 		ALLOW_PRIVATE_IP_ADDRESS: '0',
@@ -78,7 +82,6 @@ location / { proxy_pass http://docservice; }
 		UPLOAD_LIMIT: '2G',
 		NGINX_WORKER_PROCESSES: '2',
 		NGINX_WORKER_CONNECTIONS: '2048',
-		ONLYOFFICE_VERSION: '9.4.0-129',
 	};
 	const configure = spawnSync(
 		process.execPath,
@@ -119,7 +122,7 @@ location / { proxy_pass http://docservice; }
 	const httpCommon = fs.readFileSync(path.join(nginxDir, 'includes', 'http-common.conf'), 'utf8');
 	assert.match(httpCommon, /map \$http_x_forwarded_host \$the_host/);
 	assert.match(httpCommon, /map \$host \$cache_tag/);
-	assert.match(httpCommon, /default "[a-f0-9]{16}";/);
+	assert.match(httpCommon, new RegExp(`default "${assetCacheTag}";`));
 	assert.match(httpCommon, /proxy_set_header Host \$the_host;/);
 	assert.doesNotMatch(httpCommon, /__CACHE_TAG__/);
 
@@ -130,6 +133,15 @@ location / { proxy_pass http://docservice; }
 	);
 	assert.notEqual(unsafeHeader.status, 0);
 	assert.match(unsafeHeader.stderr, /valid HTTP header name/);
+
+	fs.writeFileSync(assetCacheTagFile, 'stale-or-corrupt\n');
+	const invalidAssetCacheTag = spawnSync(
+		process.execPath,
+		[path.join(projectRoot, 'runtime', 'scripts', 'configure.mjs')],
+		{ env: environment, encoding: 'utf8' },
+	);
+	assert.notEqual(invalidAssetCacheTag.status, 0);
+	assert.match(invalidAssetCacheTag.stderr, /asset cache tag is invalid/);
 
 	console.log('[test-configure] OK: generated configuration and validation behavior verified');
 } finally {

@@ -5,6 +5,7 @@ readonly TEST_ROOT=/tmp/onlyoffice-services-test
 readonly SERVER_ROOT="${TEST_ROOT}/server"
 readonly IMAGE_RUNTIME_ROOT="${TEST_ROOT}/image-runtime"
 readonly UPSTREAM_CONFIG_ROOT="${TEST_ROOT}/upstream-config"
+readonly ASSET_CACHE_TAG_FILE="${TEST_ROOT}/ASSET_CACHE_TAG"
 readonly RUNTIME_CONFIG_DIR="${SERVER_ROOT}/runtime/config"
 readonly NGINX_DIR="${SERVER_ROOT}/runtime/nginx"
 readonly LOG_DIR="${SERVER_ROOT}/logs"

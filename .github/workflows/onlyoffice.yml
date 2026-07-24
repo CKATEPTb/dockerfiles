@@ -139,6 +139,22 @@ jobs:
           api_script="$(curl -fsS --max-time 15 \
             http://127.0.0.1:18080/web-apps/apps/api/documents/api.js)"
           grep -Fq 'DocsAPI' <<< "$api_script"
+          cache_tag="$(docker exec --user 10001:10001 "$container_name" \
+            grep -Eo '[a-f0-9]{16}' \
+            /home/container/runtime/nginx/includes/http-common.conf | head -n 1)"
+          product_version="$(docker exec --user 10001:10001 "$container_name" \
+            dpkg-query -W -f='${Version}' onlyoffice-documentserver)"
+          product_version="${product_version%%-*}"
+          test -n "$cache_tag"
+          test -n "$product_version"
+          grep -Fq "$cache_tag" <<< "$api_script"
+          curl -fsS --max-time 15 \
+            "http://127.0.0.1:18080/${product_version}-${cache_tag}/sdkjs/common/AllFonts.js" \
+            | grep -q .
+          docker exec --user 10001:10001 "$container_name" \
+            test -r /var/www/onlyoffice/documentserver/server/FileConverter/bin/AllFonts.js
+          docker exec --user 10001:10001 "$container_name" \
+            test -r /var/www/onlyoffice/documentserver/server/FileConverter/bin/font_selection.bin
           docker exec --user 10001:10001 "$container_name" \
             nginx -t -c /home/container/runtime/nginx/nginx.conf -p /home/container
           docker exec --user 10001:10001 "$container_name" \
