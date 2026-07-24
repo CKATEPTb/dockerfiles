@@ -8,6 +8,7 @@ PHP_FPM_PID=""
 WHITEBOARD_PID=""
 NGINX_PID=""
 LOG_STREAM_PID=""
+CRON_PID=""
 
 configure_php_extensions() {
 	local php_version="${PHP_VERSION:-8.4}"
@@ -257,28 +258,68 @@ start_log_stream() {
 stop_services() {
 	local mariadb_admin
 	local pid
+	local -a application_pids=()
 	mariadb_admin="$(command -v mariadb-admin 2>/dev/null || true)"
 
-	if [[ -n "$MARIADB_PID" ]] && kill -0 "$MARIADB_PID" >/dev/null 2>&1 && [[ -x "$mariadb_admin" ]]; then
-		"$mariadb_admin" --protocol=socket --socket="${TMP_DIR}/mariadb.sock" --user=root shutdown >/dev/null 2>&1 || true
+	# Stop accepting web traffic before taking down PHP or its dependencies.
+	# Otherwise requests can still reach Nextcloud after MariaDB has gone away
+	# and create misleading SQLSTATE[HY000] [2002] errors during every restart.
+	stop_process "$NGINX_PID"
+	wait_process "$NGINX_PID"
+	stop_process "$PHP_FPM_PID"
+	wait_process "$PHP_FPM_PID"
+
+	# Stop cron and application services while Redis and MariaDB are available.
+	for pid in "${SERVICE_PIDS[@]}"; do
+		if [[ "$pid" == "$NGINX_PID" \
+			|| "$pid" == "$PHP_FPM_PID" \
+			|| "$pid" == "$REDIS_PID" \
+			|| "$pid" == "$MARIADB_PID" ]]; then
+			continue
+		fi
+		application_pids+=("$pid")
+		stop_process "$pid"
+	done
+	for pid in "${application_pids[@]}"; do
+		wait_process "$pid"
+	done
+
+	stop_process "$REDIS_PID"
+	wait_process "$REDIS_PID"
+
+	# MariaDB is deliberately the final application dependency to stop.
+	if process_is_running "$MARIADB_PID"; then
+		if [[ -x "$mariadb_admin" ]]; then
+			"$mariadb_admin" --protocol=socket --socket="${TMP_DIR}/mariadb.sock" --user=root shutdown >/dev/null 2>&1 || stop_process "$MARIADB_PID"
+		else
+			stop_process "$MARIADB_PID"
+		fi
 	fi
+	wait_process "$MARIADB_PID"
 
+	# Keep the compact log stream alive until all service shutdown events have
+	# been written, then stop auxiliary helpers last.
 	for pid in "${AUXILIARY_PIDS[@]}"; do
-		if [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1; then
-			kill -TERM "$pid" >/dev/null 2>&1 || true
-		fi
-	done
-
-	for pid in "${SERVICE_PIDS[@]}"; do
-		if [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1; then
-			kill -TERM "$pid" >/dev/null 2>&1 || true
-		fi
-	done
-
-	for pid in "${SERVICE_PIDS[@]}"; do
-		wait "$pid" 2>/dev/null || true
+		stop_process "$pid"
 	done
 	for pid in "${AUXILIARY_PIDS[@]}"; do
-		wait "$pid" 2>/dev/null || true
+		wait_process "$pid"
 	done
+}
+
+process_is_running() {
+	local pid="${1:-}"
+	[[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1
+}
+
+stop_process() {
+	local pid="${1:-}"
+	process_is_running "$pid" || return 0
+	kill -TERM "$pid" >/dev/null 2>&1 || true
+}
+
+wait_process() {
+	local pid="${1:-}"
+	[[ -n "$pid" ]] || return 0
+	wait "$pid" 2>/dev/null || true
 }

@@ -50,7 +50,8 @@ start_whiteboard
 start_nginx
 start_log_stream
 cron_loop &
-SERVICE_PIDS+=("$!")
+CRON_PID=$!
+SERVICE_PIDS+=("$CRON_PID")
 start_console
 
 log "Services successfully launched."
